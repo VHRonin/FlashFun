@@ -2,6 +2,7 @@ package com.example.flashfun.navigation
 
 sealed class Screen(val route: String) {
     object DeckList : Screen("deck_list")
+    object CreateDeck : Screen("create_deck")
     object Study : Screen("study/{setId}") {
         fun createRoute(setId: String) = "study/$setId"
     }
@@ -9,3 +10,4 @@ sealed class Screen(val route: String) {
         fun createRoute(correct: Int, total: Int) = "result/$correct/$total"
     }
 }
+

@@ -3,6 +3,8 @@ package com.example.flashfun.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -15,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.flashfun.data.FlashCard
 import com.example.flashfun.ui.viewmodel.StudyViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,15 +33,12 @@ fun StudyScreen(
     val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(state.isFinished) {
-        if (state.isFinished) {
-            onFinished(state.correctCount, state.totalCards)
-        }
+        if (state.isFinished) onFinished(state.correctCount, state.totalCards)
     }
 
     val progress by animateFloatAsState(
         targetValue = if (state.totalCards > 0)
-            (state.currentIndex + 1).toFloat() / state.totalCards
-        else 0f,
+            (state.currentIndex + 1).toFloat() / state.totalCards else 0f,
         animationSpec = tween(400, easing = EaseOutCubic),
         label = "progress"
     )
@@ -68,12 +68,13 @@ fun StudyScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(Modifier.height(8.dp))
 
-            // Progress section
+            // Progress row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -94,22 +95,15 @@ fun StudyScreen(
             Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
                 progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp),
+                modifier = Modifier.fillMaxWidth().height(6.dp),
                 strokeCap = StrokeCap.Round,
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
             )
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // Card area
             state.currentCard?.let { card ->
-                // var cardKey by remember { mutableIntStateOf(0) }
-
-                // LaunchedEffect(state.currentIndex) { cardKey = state.currentIndex }
-
                 AnimatedContent(
                     targetState = card,
                     transitionSpec = {
@@ -118,22 +112,21 @@ fun StudyScreen(
                     },
                     label = "card_transition"
                 ) { currentCard ->
-                    FlashCard(
-                        question = currentCard.question,
-                        answer = currentCard.answer,
+                    FlashCardView(
+                        card = currentCard,
                         isAnswerVisible = state.isAnswerVisible,
+                        userAnswer = state.userAnswer,
+                        onUserAnswerChange = viewModel::onUserAnswerChange,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
 
-                Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(24.dp))
 
                 // Buttons
                 AnimatedContent(
                     targetState = state.isAnswerVisible,
-                    transitionSpec = {
-                        fadeIn(tween(200)) togetherWith fadeOut(tween(150))
-                    },
+                    transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(150)) },
                     label = "buttons_transition"
                 ) { showingAnswer ->
                     if (showingAnswer) {
@@ -141,12 +134,9 @@ fun StudyScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            // Don't know
                             OutlinedButton(
                                 onClick = viewModel::onDontKnow,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(56.dp),
+                                modifier = Modifier.weight(1f).height(56.dp),
                                 shape = MaterialTheme.shapes.large,
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     contentColor = MaterialTheme.colorScheme.error
@@ -158,17 +148,10 @@ fun StudyScreen(
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
-
-                            // Know
                             Button(
                                 onClick = viewModel::onKnow,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(56.dp),
-                                shape = MaterialTheme.shapes.large,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary
-                                )
+                                modifier = Modifier.weight(1f).height(56.dp),
+                                shape = MaterialTheme.shapes.large
                             ) {
                                 Text(
                                     text = "✓  Знаю",
@@ -180,9 +163,7 @@ fun StudyScreen(
                     } else {
                         Button(
                             onClick = viewModel::showAnswer,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
                             shape = MaterialTheme.shapes.large
                         ) {
                             Text(
@@ -193,16 +174,19 @@ fun StudyScreen(
                         }
                     }
                 }
+
+                Spacer(Modifier.height(24.dp))
             }
         }
     }
 }
 
 @Composable
-private fun FlashCard(
-    question: String,
-    answer: String,
+private fun FlashCardView(
+    card: FlashCard,
     isAnswerVisible: Boolean,
+    userAnswer: String,
+    onUserAnswerChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -216,12 +200,11 @@ private fun FlashCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 280.dp)
-                .padding(28.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Question section
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Question
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Surface(
                     shape = MaterialTheme.shapes.small,
                     color = MaterialTheme.colorScheme.primaryContainer
@@ -235,63 +218,119 @@ private fun FlashCard(
                     )
                 }
                 Text(
-                    text = question,
+                    text = card.question,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    lineHeight = MaterialTheme.typography.titleMedium.lineHeight
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
-            // Divider
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant,
-                thickness = 1.dp
-            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-            // Answer section
+            // User answer input (only when answer not yet shown)
             AnimatedVisibility(
-                visible = isAnswerVisible,
-                enter = fadeIn(tween(300)) + expandVertically(tween(300, easing = EaseOutCubic))
+                visible = !isAnswerVisible,
+                enter = fadeIn(),
+                exit = fadeOut(tween(100))
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Surface(
                         shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.tertiaryContainer
+                        color = MaterialTheme.colorScheme.secondaryContainer
                     ) {
                         Text(
-                            text = "ОТВЕТ",
+                            text = "МОЙ ОТВЕТ",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
-                    Text(
-                        text = answer,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
+                    OutlinedTextField(
+                        value = userAnswer,
+                        onValueChange = onUserAnswerChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = {
+                            Text(
+                                text = "Введи свой ответ (необязательно)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        },
+                        minLines = 2,
+                        maxLines = 4,
+                        shape = MaterialTheme.shapes.large,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                        )
                     )
                 }
             }
 
-            if (!isAnswerVisible) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Нажмите «Показать ответ»",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.alpha(0.7f)
-                    )
+            // User answer display + correct answer (after reveal)
+            AnimatedVisibility(
+                visible = isAnswerVisible,
+                enter = fadeIn(tween(250)) + expandVertically(tween(300, easing = EaseOutCubic))
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Show user's answer if they typed something
+                    if (userAnswer.isNotBlank()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = MaterialTheme.colorScheme.secondaryContainer
+                            ) {
+                                Text(
+                                    text = "МОЙ ОТВЕТ",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                            Text(
+                                text = userAnswer,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        }
+                    }
+
+                    // Correct answer
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.tertiaryContainer
+                        ) {
+                            Text(
+                                text = "ПРАВИЛЬНЫЙ ОТВЕТ",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                        Text(
+                            text = card.answer,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
+            }
+
+            if (!isAnswerVisible && userAnswer.isBlank()) {
+                Text(
+                    text = "Напиши ответ или сразу нажми «Показать ответ»",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().alpha(0.7f)
+                )
             }
         }
     }
 }
+

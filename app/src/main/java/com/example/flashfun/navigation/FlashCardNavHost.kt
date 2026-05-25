@@ -1,14 +1,20 @@
 package com.example.flashfun.navigation
 
+import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.example.flashfun.ui.screens.CreateDeckScreen
 import com.example.flashfun.ui.screens.DeckListScreen
 import com.example.flashfun.ui.screens.ResultScreen
 import com.example.flashfun.ui.screens.StudyScreen
+import com.example.flashfun.ui.viewmodel.CreateDeckViewModel
 
 @Composable
 fun FlashCardNavHost(navController: NavHostController) {
@@ -20,7 +26,17 @@ fun FlashCardNavHost(navController: NavHostController) {
             DeckListScreen(
                 onDeckSelected = { setId ->
                     navController.navigate(Screen.Study.createRoute(setId))
+                },
+                onCreateDeck = {
+                    navController.navigate(Screen.CreateDeck.route)
                 }
+            )
+        }
+
+        composable(Screen.CreateDeck.route) {
+            CreateDeckScreen(
+                onBack = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() }
             )
         }
 
@@ -61,3 +77,4 @@ fun FlashCardNavHost(navController: NavHostController) {
         }
     }
 }
+

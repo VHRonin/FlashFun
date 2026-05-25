@@ -168,8 +168,8 @@ fun ResultScreen(
 private fun StatCard(
     label: String,
     value: String,
-    containerColor: Color,
-    contentColor: Color,
+    containerColor: androidx.compose.ui.graphics.Color,
+    contentColor: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier
 ) {
     Surface(

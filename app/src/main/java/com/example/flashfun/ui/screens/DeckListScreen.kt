@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,14 +21,22 @@ import com.example.flashfun.data.Repository
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DeckListScreen(onDeckSelected: (String) -> Unit) {
+fun DeckListScreen(
+    onDeckSelected: (String) -> Unit,
+    onCreateDeck: () -> Unit
+) {
+    // Observe Repository list — rebuild when we come back from CreateDeck
+    val cardSets by remember {
+        derivedStateOf { Repository.cardSets.toList() }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Column {
                         Text(
-                            text = "FlashCards",
+                            text = "FlashFun\uD83C\uDCCF",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -42,16 +51,28 @@ fun DeckListScreen(onDeckSelected: (String) -> Unit) {
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onCreateDeck,
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                text = { Text("Новый набор") }
+            )
         }
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 12.dp,
+                bottom = 96.dp // space for FAB
+            ),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            itemsIndexed(Repository.cardSets) { _, set ->
+            itemsIndexed(cardSets) { _, set ->
                 DeckCard(set = set, onClick = { onDeckSelected(set.id) })
             }
         }
@@ -88,7 +109,6 @@ private fun DeckCard(set: FlashCardSet, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Emoji badge
             Surface(
                 shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.primaryContainer,
@@ -99,7 +119,6 @@ private fun DeckCard(set: FlashCardSet, onClick: () -> Unit) {
                 }
             }
 
-            // Text block
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = set.title,
@@ -128,7 +147,7 @@ private fun DeckCard(set: FlashCardSet, onClick: () -> Unit) {
             }
 
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowForwardIos,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(16.dp)
@@ -136,3 +155,4 @@ private fun DeckCard(set: FlashCardSet, onClick: () -> Unit) {
         }
     }
 }
+
